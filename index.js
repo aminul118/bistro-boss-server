@@ -41,9 +41,10 @@ async function run() {
      * !            Create database connections
      * ----------------------------------------
      */
-
-    const menuCollections = client.db("BistroDB").collection("menu");
-    const reviewsCollections = client.db("BistroDB").collection("reviews");
+    const db = client.db("BistroDB");
+    const menuCollections = db.collection("menu");
+    const reviewsCollections = db.collection("reviews");
+    const cartCollections = db.collection("carts");
 
     /**
      * ----------------------------------------
@@ -63,6 +64,23 @@ async function run() {
      */
     app.get("/review", async (req, res) => {
       const result = await reviewsCollections.find().toArray();
+      res.send(result);
+    });
+
+    /**
+     * ----------------------------------------
+     * !            Carts
+     * ----------------------------------------
+     */
+    app.post("/carts", async (req, res) => {
+      const cart = req.body;
+      const result = await cartCollections.insertOne(cart);
+      res.send(result);
+    });
+    app.get("/carts", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const result = await cartCollections.find(query).toArray();
       res.send(result);
     });
 
