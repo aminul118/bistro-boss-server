@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const stripe = require("stripe")(process.env.Stripe_API_KEY);
 const jwt = require("jsonwebtoken");
 const app = express();
 const port = process.env.PORT || 5000;
@@ -47,6 +48,7 @@ async function run() {
     const menuCollections = db.collection("menu");
     const reviewsCollections = db.collection("reviews");
     const cartCollections = db.collection("carts");
+    const paymentCollections = db.collection("payments");
 
     /**
      * ----------------------------------------
@@ -95,6 +97,28 @@ async function run() {
       }
       next();
     };
+
+    /**
+     * ----------------------------------------
+     * !            Stripe Payment related API
+     * ----------------------------------------
+     */
+    app.post("/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
+      console.log(price);
+      const amount = parseInt(price * 100);
+      console.log(amount, "amount inside the intent");
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
 
     /**
      * ----------------------------------------
@@ -207,6 +231,24 @@ async function run() {
       const query = { _id: new ObjectId(id) };
       const result = await cartCollections.deleteOne(query);
       res.send(result);
+    });
+
+    /**
+     * ----------------------------------------
+     * !            Admin
+     * ----------------------------------------
+     */
+
+    app.get("/admin-stats", async (req, res) => {
+      const totalUser = await userCollections.estimatedDocumentCount();
+      const totalFoodMenus = await menuCollections.estimatedDocumentCount()
+      
+
+      res.send({
+        totalUser,
+        totalFoodMenus,
+
+      });
     });
 
     // Send a ping to confirm a successful connection
